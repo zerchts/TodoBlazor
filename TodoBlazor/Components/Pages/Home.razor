@@ -1,0 +1,165 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@inject AppDbContext Db
+
+<h1 class="mb-3">To-Do List</h1>
+
+<div class="card mb-4">
+    <div class="card-header">Create a new task</div>
+    <div class="card-body">
+        <EditForm Model="@newTask" OnValidSubmit="@CreateAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="mb-3">
+                <label class="form-label">Title</label>
+                <InputText class="form-control" @bind-Value="newTask.Title" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <InputTextArea class="form-control" rows="3" @bind-Value="newTask.Description" />
+            </div>
+            <button type="submit" class="btn btn-primary">Add Task</button>
+        </EditForm>
+    </div>
+</div>
+
+@if (tasks is null)
+{
+    <p>Loading...</p>
+}
+else if (tasks.Count == 0)
+{
+    <div class="alert alert-info">No tasks yet. Add your first task above.</div>
+}
+else
+{
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th style="width:24ch">Title</th>
+                <th>Description</th>
+                <th style="width:22ch">Created</th>
+                <th style="width:18ch"></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var t in tasks)
+        {
+            if (editId == t.Id)
+            {
+                <tr>
+                    <td><InputText class="form-control" @bind-Value="editModel.Title" /></td>
+                    <td><InputTextArea class="form-control" rows="2" @bind-Value="editModel.Description" /></td>
+                    <td>@t.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td class="text-end">
+                        <button class="btn btn-success me-2" @onclick="SaveEditAsync">Save</button>
+                        <button class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                    </td>
+                </tr>
+            }
+            else
+            {
+                <tr>
+                    <td>@t.Title</td>
+                    <td>@t.Description</td>
+                    <td>@t.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td class="text-end">
+                        <button class="btn btn-outline-primary me-2" @onclick="() => BeginEdit(t)">Edit</button>
+                        <button class="btn btn-outline-danger" @onclick="() => DeleteAsync(t.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<TaskItem>? tasks;
+    private TaskItem newTask = new();
+    private int? editId;
+    private TaskItem editModel = new();
+
+    protected override Task OnInitializedAsync()
+    {
+        Load();
+        return Task.CompletedTask;
+    }
+
+    private void Load() =>
+        tasks = Db.Tasks
+                 .AsNoTracking()
+                 .OrderByDescending(x => x.CreatedAt)
+                 .ToList();
+
+
+    private async Task CreateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(newTask.Title)) return;
+
+        newTask.CreatedAt = DateTime.Now;
+        Db.Tasks.Add(newTask);
+        await Db.SaveChangesAsync();
+
+        newTask = new TaskItem(); 
+        Load();
+    }
+
+    // BEGIN EDIT
+    private void BeginEdit(TaskItem t)
+    {
+        editId = t.Id;
+        editModel = new TaskItem
+            {
+                Id = t.Id,
+                Title = t.Title,
+                Description = t.Description,
+                CreatedAt = t.CreatedAt
+            };
+    }
+
+
+    private async Task SaveEditAsync()
+    {
+        if (editId is null) return;
+
+        try
+        {
+            var entity = await Db.Tasks.FindAsync(editModel.Id); 
+            if (entity is null)
+            {
+                editId = null;
+                Load();
+                return;
+            }
+
+            
+            entity.Title = editModel.Title?.Trim() ?? "";
+            entity.Description = editModel.Description;
+            entity.CreatedAt = editModel.CreatedAt; 
+
+            await Db.SaveChangesAsync();
+
+            editId = null;
+            Load();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("[SaveEditAsync] " + ex); 
+        }
+    }
+
+    private void CancelEdit() => editId = null;
+
+    private async Task DeleteAsync(int id)
+    {
+        var found = await Db.Tasks.FindAsync(id);
+        if (found is not null)
+        {
+            Db.Tasks.Remove(found);
+            await Db.SaveChangesAsync();
+            Load();
+        }
+    }
+}
+
