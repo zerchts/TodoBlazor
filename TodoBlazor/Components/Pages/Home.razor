@@ -15,6 +15,10 @@
                 <InputText class="form-control" @bind-Value="newTask.Title" />
             </div>
             <div class="mb-3">
+                <label class="form-label">PIC</label>
+                <InputText class="form-control" @bind-Value="newTask.PIC" />
+            </div>
+            <div class="mb-3">
                 <label class="form-label">Description</label>
                 <InputTextArea class="form-control" rows="3" @bind-Value="newTask.Description" />
             </div>
@@ -33,10 +37,16 @@ else if (tasks.Count == 0)
 }
 else
 {
+    @if (tasks is not null && tasks.Count > 0)
+    {
+        <p><strong>Total Tasks:</strong> @tasks.Count</p>
+    }
+
     <table class="table table-striped align-middle">
         <thead>
             <tr>
                 <th style="width:24ch">Title</th>
+                <th style="width:28ch">PIC</th>
                 <th>Description</th>
                 <th style="width:22ch">Created</th>
                 <th style="width:18ch"></th>
@@ -48,7 +58,8 @@ else
             if (editId == t.Id)
             {
                 <tr>
-                    <td><InputText class="form-control" @bind-Value="editModel.Title" /></td>
+                        <td><InputText class="form-control" @bind-Value="editModel.Title" /></td>
+                        <td><InputText class="form-control" @bind-Value="editModel.PIC" /></td>
                     <td><InputTextArea class="form-control" rows="2" @bind-Value="editModel.Description" /></td>
                     <td>@t.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                     <td class="text-end">
@@ -61,6 +72,7 @@ else
             {
                 <tr>
                     <td>@t.Title</td>
+                    <td>@t.PIC</td>
                     <td>@t.Description</td>
                     <td>@t.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                     <td class="text-end">
@@ -113,6 +125,7 @@ else
             {
                 Id = t.Id,
                 Title = t.Title,
+                PIC = t.PIC,
                 Description = t.Description,
                 CreatedAt = t.CreatedAt
             };
@@ -133,8 +146,9 @@ else
                 return;
             }
 
-            
+
             entity.Title = editModel.Title?.Trim() ?? "";
+            entity.PIC = editModel.PIC;
             entity.Description = editModel.Description;
             entity.CreatedAt = editModel.CreatedAt; 
 
